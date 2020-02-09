@@ -1,0 +1,124 @@
+{% load static %}
+{% load blog %}
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="{% block meta_keywords %}{% endblock %}">
+    <meta name="description" content="{% block meta_description %}{% endblock %}">
+    <title>{% block meta_title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'blog/css/style.css' %}">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP|Ubuntu|Ubuntu+Mono&display=swap" rel="stylesheet">
+    {% block extrahead %}{% endblock %}
+  </head>
+  <body>
+
+  <header id="site-header">
+    <div class="container" id="container">
+      <a href="{% url 'blog:top'%}" id="head-title">{% block title %}{% endblock %}</a>
+    </div>
+  </header>
+
+
+  <main>
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer id=site-footer>
+    <div class="container" id="footer-container">
+      {% render_subscribe_section %}
+
+      <hr>
+      <ul class="inline-ul">
+        {% block link %}{% endblock %}
+      </ul>
+      <p id="copyright">{% block copyright %}{% endblock %}</p>
+
+
+    </div>
+  </footer>
+
+  <script>
+      document.addEventListener('DOMContentLoaded', e => {
+
+        const serachForm = document.getElementById('seach-form');
+
+        for (const tag of document.getElementByClassName('tag')){
+            tag.addEventListener('click', () => {
+                const pk = tag.dataset.pk;
+                const checkbox = document.querysetSelector(`input[name="tags"][value="{$pk}"]`);
+                if (checkbox.checked) {
+                  checkbox.checked = false;
+                } else {
+                    checkbox.checked = true;
+                }
+                serachForm.submit();
+            });
+        }
+
+        for (const check of document.getElementByName('tags')) {
+            check.addEventListener('change', () => {
+                serachForm.submit()
+            });
+        }
+
+        const getCookie = name => {
+            if (document.cookie && document.cookie !== '') {
+                for (const cookie of document.cookie.split(';')) {
+                  const [key, value] = cookie.trim().split('=');
+                  if (key === name) {
+                      return decodeURIComponent(value);
+                  }
+                }
+            }
+        };
+
+        const csrftoken = getCookie('csrftoken');
+        const suscribeForm = document.getElementById('subscribe-form');
+        const emailErrorArea = document.getElementById('email-errors');
+
+        subscribeForm.addEventListener('submit', e => {
+            e.preventDefault();
+
+            emailErrorArea.innerHTML = '';
+
+            const url = subscribeForm.action;
+            const mail = encodeURIComponent(document.getElementById('id_mail').value);
+            fetch(url, {
+                method: 'POST',
+                body: `mail=${mail}`,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+                    'X-CSRFToken': csrftoken,
+                },
+            }).then(response => {
+              if (response.ok) {
+                response.json().then(response => {
+                    const p = document.createElememt('p');
+                    p.classList.add('helptext');
+                    p.textContent = response.message;
+                    emailErrorArea.append(p);
+                    document.getElementById('id_mail').disabled = true;
+                    document.getElementById('subscribe-button').disabled = true;
+                });
+              } else {
+                response.json().then(response => {
+                  for (const emailError of response.mail) {
+                      const p = document.createElememt('p');
+                      p.classList.add('helptext');
+                      p.textContent = emailError.message;
+                      emailErrorArea.append(p);
+                  }
+                });
+              }
+            }).catch(error => {
+                console.log(error);
+            });
+        });
+      });
+  </script>
+  </body>
+</html>
